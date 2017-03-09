@@ -8,7 +8,8 @@ tag: migrate
 
 * content
 {:toc}
-###SEAndroid安全机制
+
+### SEAndroid安全机制
 ![enter image description here](http://img.blog.csdn.net/20140710112453799?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvTHVvc2hlbmd5YW5n/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
 1. 内核空间的SELinux LSM模块负责内核资源的安全访问控制。
 >访问向量缓冲（Access Vector Cache）和一个安全服务（Security Server）
@@ -23,7 +24,7 @@ tag: migrate
 
 App进程、App数据文件、系统文件和系统属性。这四种类型对象的安全上下文通过四个文件来描述：mac_permissions.xml、seapp_contexts、file_contexts和property_contexts，它们均位于external/sepolicy目录中。
 
-####mac_permissions.xml
+#### mac_permissions.xml
 ```
 <?xml version="1.0" encoding="utf-8"?>
 <policy>
@@ -56,7 +57,7 @@ App进程、App数据文件、系统文件和系统属性。这四种类型对�
 </policy>
 ```
 `文件mac_permissions.xml给不同签名的App分配不同的seinfo字符串，例如，在AOSP源码环境下编译并且使用平台签名的App获得的seinfo为“platform”，使用第三方签名安装的App获得的seinfo签名为"default"。`
-####seapp_contexts
+#### seapp_contexts
 ```
 # Input selectors: 
 #   isSystemServer (boolean)
@@ -109,7 +110,7 @@ user=_isolated domain=isolated_app
 user=_app seinfo=platform domain=platform_app type=platform_app_data_file 
 ```
 
-####file_contexts
+#### file_contexts
 ```
 ###########################################
 # Root
@@ -137,7 +138,7 @@ user=_app seinfo=platform domain=platform_app type=platform_app_data_file
 /system/bin/ash     u:object_r:shell_exec:s0
 /system/bin/mksh    u:object_r:shell_exec:s0
 ```
-####property_contexts
+#### property_contexts
 ```
 ##########################
 # property service keys
@@ -156,18 +157,18 @@ sys.usb.config          u:object_r:radio_prop:s0
 ......
 ```
 
-####安全策略由所有.te文件构成
+#### 安全策略由所有.te文件构成
 
-####启动过程
+#### 启动过程
 在init进程启动的过程中，加载所有策略文件到SELinux LSM模块中去
 >A. 以/sys/fs/selinux为安装点，安装一个类型为selinuxfs的文件系统，也就是SELinux文件系统，用来与内核空间的SELinux LSM模块通信。
 B. 如果不能在/sys/fs/selinux这个安装点安装SELinux文件系统，那么再以/selinux为安装点，安装SELinux文件系统。
 C. 成功安装SELinux文件系统之后，接下来就调用另外一个函数selinux_android_reload_policy来将SEAndroid安全策略加载到内核空间的SELinux LSM模块中去。(`sys/fs/selinux/load文件，然后将参数data所描述的安全策略写入到这个文件中去。`)
 `在较旧版本的Linux系统中，SELinux文件系统是以/selinux为安装点的，不过后面较新的版本都是以/sys/fs/selinux为安装点的，Android系统使用的是后者`
 
-####PackageManagerService和installd负责创建App数据目录的安全上下文，Zygote进程负责创建App进程的安全上下文，而init进程负责控制系统属性的安全访问。
+#### PackageManagerService和installd负责创建App数据目录的安全上下文，Zygote进程负责创建App进程的安全上下文，而init进程负责控制系统属性的安全访问。
 
-####文件安全上下文
+#### 文件安全上下文
 1.预置在ROM里面的.
 2.动态创建的，即在系统在运行的过程中创建的。(`它们的安全上下文如果没有特别指定，就与父目录的安全上下文一致。`)
 ![enter image description here](http://img.blog.csdn.net/20140715111923780?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvTHVvc2hlbmd5YW5n/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
@@ -184,7 +185,7 @@ mac_permissions.xml
  App Id大于等于AID_APP(10000)并且小于AID_ISOLATED_START(99000)是分配给`应用程序`使用的，它们对应的username统一设置为“_app”。
  App Id大于等于AID_ISOLATED_START(99000)是分配给运行在独立沙箱（没有任何自己的Permission）的`应用程序`使用的，它们对应的username统一设置为“_isolated”。
        
-####进程安全上下文关
+#### 进程安全上下文关
 ![enter image description here](http://img.blog.csdn.net/20140723013307393?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvTHVvc2hlbmd5YW5n/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
 1. 为独立进程静态地设置安全上下文
 >概括来说，在external/sepolicy/zygote.te文件中，通过init_daemon_domain指明了Zygote进程的domain为zygote。我们可以从Zygote进程的创建过程来理解这些安全策略。首先， Zygote进程是由init进程fork出来的。在fork出来的时候，Zygote进程的domain来自于父进程init的domain，即此时Zygote进程的domain为init。接下来，刚刚fork出来的Zygote进程会通过系统接口exec将文件/system/bin/app_process加载进来执行。由于上面提到的allow和type_transition规则的存在，使得文件/system/bin/app_process被exec到刚刚fork出来的Zygote进程的时候，它的domain自动地从init转换为zygote。这样我们就可以给init进程和Zygote进程设置不同的domain，以便可以给它们赋予不同的SEAndroid安全权限。
@@ -276,7 +277,7 @@ allow $1 $3:process { siginh rlimitinh };
 ActivityManagerService在请求Zygote进程创建应用程序进程的时候，会传递很多参数，例如应用程序在安装时分配到的uid和gid。增加了SEAndroid安全机制之后，ActivityManagerService传递给Zygote进程的参数包含了一个seinfo。这个seinfo与我们在前面SEAndroid安全机制中的文件安全上下文关联分析一文中介绍的seinfo是一样的，不过它的作用是用来设置应用程序进程的安全上下文，而不是设置应用程序数据文件的安全上下文
 Zygote在fork后，进程一开时的contect为u:r:zygote:s0，之后在设置正确context。
 
-####SEAndroid安全机制对Android属性访问的保护分析 
+#### SEAndroid安全机制对Android属性访问的保护分析 
 
 ![enter image description here](http://img.blog.csdn.net/20140727023519555?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvTHVvc2hlbmd5YW5n/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
 `Android系统的所有属性都是保存在内存中。这块属性内存区是通过将文件/dev/__properties__映射到内存中创建的`
@@ -299,7 +300,7 @@ struct prop_info {
     char value[PROP_VALUE_MAX];属性值，长度最大为92个字节。
 };
 ```
-#####内存区域的创建和初始化
+##### 内存区域的创建和初始化
 1. 属性内存区域是由init进程在启动的过程中创建和初始化。
 2. Init进程在启动的时候，会创建一个属性管理服务。这个属性管理服务会创建一个Server端Socket，用来接收其它进程发送过来的增加或者修改属性的请求。
 3. system/core/init/init.c
@@ -381,7 +382,7 @@ void start_property_service(void)
 }
 ```
 
-####其它进程是如何将Init进程创建的属性内存区域映射到自己的进程地址空间
+#### 其它进程是如何将Init进程创建的属性内存区域映射到自己的进程地址空间
 1. 在创建进程之前，调用函数is_selinux_enabled检查系统是否开启了SEAndroid。
 2. 在创建进程之后，调用函数properties_inited检查Init进程是否已经创建和初始化好属性内存区域了。如果已经创建和初始化好，那么就继续调用函数get_property_workspace来获得用来描述属性内存区域的文件描述符fd以及属性内存区域的大小sz。我们在前面提到，属性内存区域是通过将文件/dev/__properties__映射到内存中创建的。因此，这里得到的文件描述符fd实际上指向的就是文件/dev/__properties__。再接下来将属性内存区域的文件描述符以及大小拼接成一个字符串，并且将得到的字符串作为环境变量ANDROID_PROPERTY_WORKSPACE的值。
 3. 调用函数setsockcreatecon设置新创建的Socket的安全上下文，这是因为接下来要为Zygote进程创建一个名称zygote的Socket。
@@ -393,7 +394,7 @@ void start_property_service(void)
 并且要通过check_control_perms（以“ctl.”开头）和check_perms（包括基于UID/GID的权限检查和基于SEAndroid的权限检查）检测后才能修改属性。
 `遍历数组property_perms。检查名称为name的属性是否在它的配置当中。如果在它的配置之中，一方面是要求请求进程具有与配置一样的UID/GID，另一方面是要求请求进程的安全上下文符合SEAndroid安全策略定义的规则。如果不在它的配置当中，那么就拒绝对名称为name的属性进行增加或者修改`
 
-####SEAndroid安全机制对Binder IPC的保护分析 
+#### SEAndroid安全机制对Binder IPC的保护分析 
 
 ![enter image description here](http://img.blog.csdn.net/20140801012725545?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvTHVvc2hlbmd5YW5n/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
 当Service Manager将自己注册为Context Manager时，Binder驱动会检查它是否具有设置Context Manager的SEAndroid安全权限。
@@ -417,6 +418,3 @@ allow unconfineddomain domain:binder { call transfer set_context_mgr };
 `
 在Android系统中，所有类型的应用程序进程，以及系统服务进程，例如Service Manager进程、Zygote进程和System Server进程，它们能不能传递文件描述符给对方，不是取决于它们的domain有没有unconfined_domain属性，而是取决于目标进程是否具有使用传递的文件的描述符以及访问传递的文件的内容的权限。
 `
-
-
-
