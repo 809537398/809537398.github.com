@@ -112,11 +112,10 @@ user=_app seinfo=platform domain=platform_app type=platform_app_data_file
 
 #### file_contexts
 ```
-###########################################
-# Root
+#Root
 /           u:object_r:rootfs:s0
 
-# Data files
+#Data files
 /adb_keys       u:object_r:rootfs:s0
 /default.prop       u:object_r:rootfs:s0
 /fstab\..*      u:object_r:rootfs:s0
@@ -130,8 +129,6 @@ user=_app seinfo=platform domain=platform_app type=platform_app_data_file
 /sbin(/.*)?     u:object_r:rootfs:s0
 
 ......
-
-#############################
 # System files
 #
 /system(/.*)?       u:object_r:system_file:s0
@@ -140,7 +137,6 @@ user=_app seinfo=platform domain=platform_app type=platform_app_data_file
 ```
 #### property_contexts
 ```
-##########################
 # property service keys
 #
 #
@@ -214,8 +210,9 @@ service zygote /system/bin/app_process -Xzygote /system/bin --zygote --start-sys
 1. Zygote进程对应的可执行文件为/system/bin/app_process。
 2. 文件/system/bin/app_process的type为zygote_exec
 3. external/sepolicy/zygote.te文件中，定义了一个名称为zygote的domain
-```
+
 # zygote
+```
 type zygote, domain;
 type zygote_exec, exec_type, file_type;
 
@@ -225,7 +222,6 @@ unconfined_domain(zygote)
 ```
 4. init_daemon_domain语句是一个宏，定义在文件external/sepolicy/te_macros中，用来设置zygote这个domain的权限
 ```
-#####################################
 # init_daemon_domain(domain)
 # Set up a transition from init to the daemon domain
 # upon executing its binary.
@@ -236,7 +232,6 @@ tmpfs_domain($1)
 ```
 5. domain_auto_trans 
 ```
-#####################################
 # domain_auto_trans(olddomain, type, newdomain)
 # Automatically transition from olddomain to newdomain
 # upon executing a file labeled with type.
@@ -251,7 +246,6 @@ type_transition $1 $2:process $3;
 6. type_transition 指定当一个domain为init的进程创建一个子进程执行一个type为zygote_exec的文件时，将该子进程的domain设置为zygote，而不是继承父进程的domain。
 7. domain_trans 用来允许进程的domain从init修改为zygote
 ```
-#####################################
 # domain_trans(olddomain, type, newdomain)
 # Allow a transition from olddomain to newdomain
 # upon executing a file labeled with type.
